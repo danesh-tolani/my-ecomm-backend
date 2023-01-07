@@ -3,6 +3,7 @@ import AuthRoles from "../utils/authRoles";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import config from "../config/index";
 
 const userSchema = new mongoose.Schema(
   {
@@ -34,8 +35,9 @@ const userSchema = new mongoose.Schema(
 );
 
 // challenge 1: encrypt password before saving
+// mongoose hooks for schema
 userSchema.pre("save", async function (next) {
-  if (!this.modified("password")) return next();
+  if (!this.isModified("password")) return next();
   // this checks if the password is there or not, if modified is true than it means password was already there and this encrypt password should not run
 
   // used normal function because we need to use .this which refers to the userSchema object
@@ -43,4 +45,25 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+// Schema methods
+userSchema.methods = {
+  // compare password
+  comparePassword: async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+  },
+
+  // generate JWT Token
+  getJwtToken: function () {
+    return JWT.sign(
+      {
+        _id: this._id,
+        role: this.role,
+      },
+      config.JWT_SECRET,
+      {
+        expiresIn: config.JWT_EXPIRY,
+      }
+    );
+  },
+};
 export default mongoose.model("User", userSchema); // will be stored as "users" in mongodb
