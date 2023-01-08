@@ -1,5 +1,20 @@
 import express from "express";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+import morgan from "morgan";
 
 const app = express();
+
+app.use(express.json());
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+); // we need to use this middleware when dealing with form data
+app.use(cors());
+app.use(cookieParser());
+
+// morgan logger
+app.use(morgan("tiny")); // it prints our api req and res in the console
 
 export default app;
