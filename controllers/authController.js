@@ -156,13 +156,12 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 });
 
 /***************************************************************
-@reset_PASSWORD
+@RESET_PASSWORD
 @route http://localhost:4000/api/auth/password/reset/:resetToken 
 @description User will be able to reset the password based on the url
 @parameters token from the url (params), password, confirmPassword
 @return User object
 ***************************************************************/
-
 export const resetPassword = asyncHandler(async (req, res) => {
   const { token: resetToken } = req.params;
   const { password, confirmPassword } = req.body;
@@ -204,3 +203,24 @@ export const resetPassword = asyncHandler(async (req, res) => {
 });
 
 // TODO: Create a controller for change password
+
+/***************************************************************
+@rGET_PROFILE
+@REQUEST_TYPE GET
+@route http://localhost:4000/api/auth/profile
+@description check for token and populate req.user
+@parameters 
+@return User object
+***************************************************************/
+export const getProfile = asyncHandler(async (req, res) => {
+  // user is coming from the middleware
+  const { user } = req;
+  if (!user) {
+    throw new CustomError("User not found", 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
