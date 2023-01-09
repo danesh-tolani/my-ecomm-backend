@@ -1,6 +1,7 @@
 import User from "../models/user.schema";
 import asyncHandler from "../service/asyncHandler";
 import CustomError from "../utils/customError";
+import mailHelper from "../utils/mailHelper";
 
 export const cookieOption = {
   expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
@@ -100,4 +101,56 @@ export const logout = asyncHandler(async (_req, res) => {
     success: true,
     message: "Logged Out",
   });
+});
+
+/***************************************************************
+@FORGOT_PASSWORD
+@route http://localhost:4000/api/auth/password/forgot 
+@description User will submit email and we will generate a token
+@parameters email
+@return email sent
+***************************************************************/
+
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  // check email validation
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    throw new CustomError("User not found", 404);
+  }
+
+  const resetToken = user.generateForgotPasswordToken();
+
+  // if we just do user.save() it will fire all the validations but if we just want to save then do the below
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${req.protocol}://${req.get("host")}/api/auth/password/reset/${resetToken}`;
+
+  const text = `Your password reset url is 
+  \n\n ${resetUrl} \n\n
+  `;
+
+  try {
+    await mailHelper({
+      email: user.email,
+      subject: "Password reset email for website",
+      text: text,
+    });
+    res.status(200).json({
+      success: true,
+      message: `Email sent to ${user.email}`,
+    });
+  } catch (error) {
+    // even though email failed to sent still the database fields like forgotPasswordToken and time got populated, thus we need to clear those fields
+    // roll back - clear fields and save
+    user.forgotPasswordToken = undefiled;
+    user.forgotPasswordExpiry = undefined;
+
+    await user.save({ validateBeforeSave: false });
+
+    throw new CustomError(err.message || "Email sent failure", 500);
+  }
 });
