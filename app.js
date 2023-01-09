@@ -6,11 +6,14 @@ import morgan from "morgan";
 const app = express();
 
 app.use(express.json());
+
+// we need to use this middleware when dealing with form data
 app.use(
   express.urlencoded({
     extended: true,
   })
-); // we need to use this middleware when dealing with form data
+);
+
 app.use(cors());
 app.use(cookieParser());
 
