@@ -2,6 +2,7 @@ import User from "../models/user.schema";
 import asyncHandler from "../service/asyncHandler";
 import CustomError from "../utils/customError";
 import mailHelper from "../utils/mailHelper";
+import crypto from "crypto";
 
 export const cookieOption = {
   expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
@@ -110,7 +111,6 @@ export const logout = asyncHandler(async (_req, res) => {
 @parameters email
 @return email sent
 ***************************************************************/
-
 export const forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
 
@@ -146,7 +146,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   } catch (error) {
     // even though email failed to sent still the database fields like forgotPasswordToken and time got populated, thus we need to clear those fields
     // roll back - clear fields and save
-    user.forgotPasswordToken = undefiled;
+    user.forgotPasswordToken = undefined;
     user.forgotPasswordExpiry = undefined;
 
     await user.save({ validateBeforeSave: false });
@@ -154,3 +154,53 @@ export const forgotPassword = asyncHandler(async (req, res) => {
     throw new CustomError(err.message || "Email sent failure", 500);
   }
 });
+
+/***************************************************************
+@reset_PASSWORD
+@route http://localhost:4000/api/auth/password/reset/:resetToken 
+@description User will be able to reset the password based on the url
+@parameters token from the url (params), password, confirmPassword
+@return User object
+***************************************************************/
+
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { token: resetToken } = req.params;
+  const { password, confirmPassword } = req.body;
+
+  const resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+
+  // find user based on the forgotPasswordToken
+  const user = await User.findOne({
+    forgotPasswordToken: resetPasswordToken,
+    forgotPasswordExpiry: { $gt: Date.now() }, // we are checking if we have token with date time greater then current date time
+  });
+
+  if (!user) {
+    throw new CustomError("Password token is invalid or expired", 400);
+  }
+
+  if (password !== confirmPassword) {
+    throw new CustomError("Password and confirm password does not match", 400);
+  }
+
+  user.password = password;
+  // we did not encrypted the password here because it is being handled in schema
+
+  user.forgotPasswordToken = undefined;
+  user.forgotPasswordExpiry = undefined;
+
+  await user.save({ validateBeforeSave: false });
+
+  // create token and send as response
+  const token = user.getJwtToken();
+  user.password = undefined;
+
+  // helper method for cookie can be added
+  res.cookie("token", token, cookieOption);
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+// TODO: Create a controller for change password
