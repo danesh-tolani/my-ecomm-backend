@@ -52,14 +52,14 @@ export const getAllCollections = asyncHandler(async (req, res) => {
 
 /***************************************************************
  @UPDATE_COLLECTION
- @route http://localhost:4000/api/collection/update/:collectionId
+ @route http://localhost:4000/api/collection/update/:id
  @description Controller for updating a collection
  @parameters collectionId (param), name
  @return updated collection object
  ***************************************************************/
 export const updateCollection = asyncHandler(async (req, res) => {
   // { sourceProperty: targetVariable }
-  const { collectionId } = req.params;
+  const { id: collectionId } = req.params;
 
   const { name } = req.body;
 
@@ -69,7 +69,7 @@ export const updateCollection = asyncHandler(async (req, res) => {
 
   //  you need to explicitly set the 'new:' option to true to get the new version of the doc, after the update is applied:
   //   Schema Validators do not work on findByIdAndUpdate, we need to explicitly mention 'runValidators: true'
-  const updatedCollection = Collection.findByIdAndUpdate(collectionId, { name: name }, { new: true, runValidators: true });
+  const updatedCollection = await Collection.findByIdAndUpdate(collectionId, { name: name }, { new: true, runValidators: true });
 
   if (!updatedCollection) {
     throw new CustomError("Collection not found", 400);
@@ -84,16 +84,16 @@ export const updateCollection = asyncHandler(async (req, res) => {
 
 /***************************************************************
  @DELETE_COLLECTION
- @route http://localhost:4000/api/collection/delete/:collectionId
+ @route http://localhost:4000/api/collection/delete/:id
  @description Controller for deleting a collection
  @parameters collectionId (param)
  @return deleted collection object
  ***************************************************************/
 
 export const deleteCollection = asyncHandler(async (req, res) => {
-  const { collectionId } = req.params;
+  const { id: collectionId } = req.params;
 
-  const deletedCollection = Collection.findByIdAndDelete({ collectionId });
+  const deletedCollection = await Collection.findByIdAndDelete({ collectionId });
 
   if (!deletedCollection) {
     throw new CustomError("Collection not found", 400);
